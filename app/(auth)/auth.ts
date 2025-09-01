@@ -117,7 +117,7 @@ export const {
         sameSite: 'lax',
         path: '/',
         secure: true,
-        domain: process.env.NODE_ENV === 'production' ? '.studymini.com' : undefined,
+        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined,
       },
     },
     callbackUrl: {
@@ -127,7 +127,7 @@ export const {
         sameSite: 'lax',
         path: '/',
         secure: true,
-        domain: process.env.NODE_ENV === 'production' ? '.studymini.com' : undefined,
+        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined,
       },
     },
     csrfToken: {
