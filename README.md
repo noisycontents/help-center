@@ -1,10 +1,14 @@
+# 미니학습지 헬프센터
+
+WordPress OAuth를 통한 미니학습지 사용자 인증과 FAQ 기반 AI 상담 시스템을 제공합니다.
+
 <a href="https://chat.vercel.ai/">
   <img alt="Next.js 14 and App Router-ready AI chatbot." src="app/(chat)/opengraph-image.png">
-  <h1 align="center">Chat SDK</h1>
+  <h1 align="center">Mini Learning Help Center</h1>
 </a>
 
 <p align="center">
-    Chat SDK is a free, open-source template built with Next.js and the AI SDK that helps you quickly build powerful chatbot applications.
+    WordPress OAuth 기반 AI 상담 시스템 - Next.js와 AI SDK로 구축된 미니학습지 헬프센터입니다.
 </p>
 
 <p align="center">
