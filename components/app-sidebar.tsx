@@ -1,6 +1,7 @@
 'use client';
 
 import type { User } from 'next-auth';
+import type { UserType } from '@/app/(auth)/auth';
 import { useRouter } from 'next/navigation';
 
 import { PlusIcon } from '@/components/icons';
@@ -64,7 +65,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         <SidebarHistory user={user} />
       </SidebarContent>
       <SidebarFooter>
-        <SidebarUserNav user={user || { id: '', email: '', name: 'Guest' }} />
+        <SidebarUserNav user={user || { id: '', email: '', name: 'Guest', type: 'guest' }} />
       </SidebarFooter>
     </Sidebar>
   );

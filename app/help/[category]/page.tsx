@@ -144,7 +144,7 @@ export default function CategoryPage() {
       return (
         <span 
           dangerouslySetInnerHTML={{ __html: text }}
-          className="[&>b]:font-bold [&>i]:italic [&>strong]:font-bold [&>em]:italic [&>u]:underline [&>a]:text-blue-600 [&>a]:hover:text-blue-800 [&>a]:underline [&>a]:no-underline [&>a]:hover:underline"
+          className="[&>b]:font-bold [&>i]:italic [&>strong]:font-bold [&>em]:italic [&>u]:underline [&>a]:text-blue-600 [&>a]:hover:text-blue-800 [&>a]:hover:underline"
         />
       );
     }

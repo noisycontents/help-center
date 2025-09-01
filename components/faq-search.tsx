@@ -152,7 +152,7 @@ export const FAQSearch = () => {
                     href={`/chat?q=${encodeURIComponent(query)}`}
                     className="text-sm text-blue-600 hover:text-blue-700"
                   >
-                    AI 상담사에게 "{query}" 질문하기 →
+                    AI 상담사에게 &quot;{query}&quot; 질문하기 →
                   </Link>
                 </div>
               </div>
@@ -163,7 +163,7 @@ export const FAQSearch = () => {
                   href={`/chat?q=${encodeURIComponent(query)}`}
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
-                  AI 상담사에게 "{query}" 질문하기 →
+                  AI 상담사에게 &quot;{query}&quot; 질문하기 →
                 </Link>
               </div>
             ) : null}

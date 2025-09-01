@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import { SessionProvider } from 'next-auth/react';
 import { AutoLoginCheck } from '@/components/auto-login-check';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chat.vercel.ai'),
@@ -80,7 +81,9 @@ export default async function RootLayout({
         >
           <Toaster position="top-center" />
           <SessionProvider>
-            <AutoLoginCheck />
+            <Suspense fallback={null}>
+              <AutoLoginCheck />
+            </Suspense>
             {children}
           </SessionProvider>
         </ThemeProvider>
