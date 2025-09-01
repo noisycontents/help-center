@@ -28,7 +28,13 @@ export function AutoLoginCheck() {
       return;
     }
 
-    // studymini.com의 쿠키 확인 (교차 도메인)
+    // 프로덕션 환경에서는 CORS 문제로 인해 자동 로그인 체크 비활성화
+    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+      console.log('배포 환경에서는 자동 로그인 체크를 건너뜁니다.');
+      return;
+    }
+
+    // studymini.com의 쿠키 확인 (교차 도메인) - 로컬 환경에서만
     const checkMainSiteLogin = async () => {
       try {
         // studymini.com의 로그인 상태 확인
