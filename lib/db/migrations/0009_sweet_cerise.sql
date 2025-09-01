@@ -1,0 +1,1 @@
+ALTER TABLE "User" ALTER COLUMN "wpUserId" SET DATA TYPE varchar(20);
