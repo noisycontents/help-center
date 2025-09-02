@@ -30,6 +30,19 @@ export function SidebarUserNav({ user }: { user: User }) {
 
   const isGuest = !data?.user || guestRegex.test(data?.user?.email ?? '');
   const displayUser = data?.user || user;
+  
+  // 디버깅용 로그
+  console.log('SidebarUserNav - 세션 데이터:', {
+    status,
+    hasSession: !!data,
+    hasUser: !!data?.user,
+    userId: data?.user?.id,
+    userType: data?.user?.type,
+    userName: data?.user?.name,
+    userEmail: data?.user?.email,
+    isGuest,
+    guestRegexTest: data?.user?.email ? guestRegex.test(data?.user?.email) : 'no email'
+  });
 
   return (
     <SidebarMenu>

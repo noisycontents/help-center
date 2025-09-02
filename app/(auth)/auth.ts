@@ -111,32 +111,33 @@ export const {
   },
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.session-token` : 'next-auth.session-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: true,
-        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined,
+        secure: process.env.NODE_ENV === 'production',
+        // 실제 배포 도메인에 맞게 설정하거나 undefined로 설정
+        domain: undefined,
       },
     },
     callbackUrl: {
-      name: `__Secure-next-auth.callback-url`,
+      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.callback-url` : 'next-auth.callback-url',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: true,
-        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined,
+        secure: process.env.NODE_ENV === 'production',
+        domain: undefined,
       },
     },
     csrfToken: {
-      name: `__Host-next-auth.csrf-token`,
+      name: process.env.NODE_ENV === 'production' ? `__Host-next-auth.csrf-token` : 'next-auth.csrf-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
       },
     },
   },
@@ -184,10 +185,13 @@ export const {
   ],
   callbacks: {
     async jwt({ token, user, account }) {
+      console.log('JWT 콜백 - token:', token.sub, 'user:', user?.id, 'account:', account?.provider);
+      
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
         token.name = user.name;
+        console.log('JWT 콜백 - 사용자 정보 업데이트:', { id: token.id, type: token.type, name: token.name });
       }
 
       // WordPress OAuth 사용자는 signIn 콜백에서 이미 처리됨
@@ -195,10 +199,13 @@ export const {
       return token;
     },
     async session({ session, token }) {
+      console.log('세션 콜백 - token:', { id: token.id, type: token.type, name: token.name });
+      
       if (session.user) {
         session.user.id = token.id;
         session.user.type = token.type;
         session.user.name = token.name;
+        console.log('세션 콜백 - 최종 세션:', { id: session.user.id, type: session.user.type, name: session.user.name, email: session.user.email });
       }
 
       return session;

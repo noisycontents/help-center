@@ -13,15 +13,33 @@ export async function middleware(request: NextRequest) {
     return new Response('pong', { status: 200 });
   }
 
-  // 일시적으로 미들웨어 비활성화 - 무한 리다이렉션 방지
-  return NextResponse.next();
+  // 인증이 필요하지 않은 경로들
+  const publicPaths = ['/login', '/register', '/api/auth'];
+  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
+  
+  if (isPublicPath) {
+    return NextResponse.next();
+  }
 
-  // TODO: 안정화 후 다시 활성화
-  // const token = await getToken({
-  //   req: request,
-  //   secret: process.env.AUTH_SECRET,
-  //   secureCookie: !isDevelopmentEnvironment,
-  // });
+  try {
+    const token = await getToken({
+      req: request,
+      secret: process.env.AUTH_SECRET,
+      secureCookie: !isDevelopmentEnvironment,
+    });
+    
+    console.log('미들웨어 - 토큰 확인:', { 
+      pathname, 
+      hasToken: !!token, 
+      tokenId: token?.id,
+      tokenType: token?.type 
+    });
+    
+    return NextResponse.next();
+  } catch (error) {
+    console.error('미들웨어 토큰 확인 오류:', error);
+    return NextResponse.next();
+  }
 }
 
 export const config = {
