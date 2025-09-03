@@ -39,7 +39,7 @@ export function SidebarToggle({
 
         {/* 모바일에서만 도움말 버튼 표시 */}
         <div className="md:hidden">
-          <Link href="/help">
+          <Link href="/chat?mode=help">
             <Button variant="ghost" size="sm" className="text-sm">
               도움말
             </Button>

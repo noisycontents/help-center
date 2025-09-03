@@ -31,6 +31,10 @@ import {
   stream,
   faq,
   type FAQ,
+  faqInternal,
+  type FAQInternal,
+  faqChunks,
+  type FAQChunks,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -630,6 +634,208 @@ export async function getFAQByTag(tag: string): Promise<Array<FAQ>> {
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get FAQ by tag',
+    );
+  }
+}
+
+// ===== FAQ Internal 관련 함수들 =====
+
+export async function createFAQInternal({
+  brand,
+  tag,
+  question,
+  content,
+}: {
+  brand: string;
+  tag?: string;
+  question: string;
+  content: string;
+}): Promise<FAQInternal> {
+  try {
+    const [newFAQ] = await db
+      .insert(faqInternal)
+      .values({
+        brand,
+        tag,
+        question,
+        content,
+      })
+      .returning()
+      .execute();
+
+    return newFAQ;
+  } catch (error) {
+    console.error('내부 FAQ 생성 중 오류 발생:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to create internal FAQ',
+    );
+  }
+}
+
+export async function getFAQInternalByBrand(brand: string): Promise<Array<FAQInternal>> {
+  try {
+    const results = await db
+      .select()
+      .from(faqInternal)
+      .where(eq(faqInternal.brand, brand))
+      .orderBy(desc(faqInternal.createdAt))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('브랜드별 내부 FAQ 검색 중 오류 발생:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get internal FAQ by brand',
+    );
+  }
+}
+
+export async function updateFAQInternal({
+  id,
+  brand,
+  tag,
+  question,
+  content,
+}: {
+  id: string;
+  brand?: string;
+  tag?: string;
+  question?: string;
+  content?: string;
+}): Promise<FAQInternal> {
+  try {
+    const updateData: any = { updatedAt: new Date() };
+    if (brand !== undefined) updateData.brand = brand;
+    if (tag !== undefined) updateData.tag = tag;
+    if (question !== undefined) updateData.question = question;
+    if (content !== undefined) updateData.content = content;
+
+    const [updatedFAQ] = await db
+      .update(faqInternal)
+      .set(updateData)
+      .where(eq(faqInternal.id, id))
+      .returning()
+      .execute();
+
+    return updatedFAQ;
+  } catch (error) {
+    console.error('내부 FAQ 업데이트 중 오류 발생:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update internal FAQ',
+    );
+  }
+}
+
+// ===== FAQ Chunks 관련 함수들 =====
+
+export async function createFAQChunks({
+  kind,
+  sourceId,
+  brand,
+  tag,
+  chunks,
+}: {
+  kind: 'public' | 'internal';
+  sourceId: string;
+  brand?: string;
+  tag?: string;
+  chunks: Array<{ content: string; embedding: number[] }>;
+}): Promise<Array<FAQChunks>> {
+  try {
+    // 기존 청크들 삭제
+    await db
+      .delete(faqChunks)
+      .where(and(
+        eq(faqChunks.kind, kind),
+        eq(faqChunks.sourceId, sourceId)
+      ))
+      .execute();
+
+    // 새 청크들 삽입
+    const chunkData = chunks.map((chunk, index) => ({
+      kind,
+      sourceId,
+      brand,
+      tag,
+      chunkIdx: index,
+      content: chunk.content,
+      embedding: chunk.embedding,
+    }));
+
+    const results = await db
+      .insert(faqChunks)
+      .values(chunkData)
+      .returning()
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('FAQ 청크 생성 중 오류 발생:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to create FAQ chunks',
+    );
+  }
+}
+
+export async function searchFAQChunks({
+  query,
+  embedding,
+  limit = 5,
+  includeInternal = true,
+}: {
+  query?: string;
+  embedding?: number[];
+  limit?: number;
+  includeInternal?: boolean;
+}): Promise<Array<FAQChunks>> {
+  try {
+    let whereConditions: SQL[] = [];
+
+    // kind 필터링
+    if (includeInternal) {
+      whereConditions.push(
+        or(
+          eq(faqChunks.kind, 'public'),
+          eq(faqChunks.kind, 'internal')
+        )!
+      );
+    } else {
+      whereConditions.push(eq(faqChunks.kind, 'public'));
+    }
+
+    // 텍스트 검색
+    if (query) {
+      whereConditions.push(like(faqChunks.content, `%${query}%`));
+    }
+
+    const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
+
+    let dbQuery = db
+      .select()
+      .from(faqChunks)
+      .limit(limit);
+
+    if (whereClause) {
+      dbQuery = dbQuery.where(whereClause);
+    }
+
+    // 벡터 검색은 추후 구현 (임베딩이 제공된 경우)
+    if (embedding) {
+      // TODO: 벡터 유사도 검색 구현
+      // ORDER BY embedding <-> $1 LIMIT $2
+    }
+
+    const results = await dbQuery.execute();
+    return results;
+  } catch (error) {
+    console.error('FAQ 청크 검색 중 오류 발생:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to search FAQ chunks',
     );
   }
 }

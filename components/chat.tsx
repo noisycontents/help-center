@@ -22,6 +22,7 @@ import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
 import type { Attachment, ChatMessage } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
+import { HelpContent } from './help-content';
 
 export function Chat({
   id,
@@ -31,6 +32,8 @@ export function Chat({
   isReadonly,
   session,
   autoResume,
+  isHelpMode = false,
+  helpCategory,
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -39,6 +42,8 @@ export function Chat({
   isReadonly: boolean;
   session: Session | null;
   autoResume: boolean;
+  isHelpMode?: boolean;
+  helpCategory?: string;
 }) {
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -70,7 +75,7 @@ export function Chat({
         return {
           body: {
             id,
-            message: messages.at(-1),
+            message: messages.length > 0 ? messages.at(-1) : null,
             selectedChatModel: initialChatModel,
             selectedVisibilityType: visibilityType,
             ...body,
@@ -95,21 +100,44 @@ export function Chat({
   });
 
   const searchParams = useSearchParams();
-  const query = searchParams.get('query');
-
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
 
   useEffect(() => {
-    if (query && !hasAppendedQuery) {
+    // 초기 메시지가 이미 있으면 URL 정리만 하고 자동 전송하지 않음 (서버에서 이미 처리됨)
+    if (initialMessages.length > 0 && !hasAppendedQuery) {
+      const firstPart = initialMessages[0].parts[0];
+      if (firstPart && firstPart.type === 'text') {
+        console.log('🔵 서버에서 전달된 초기 메시지 확인:', {
+          text: firstPart.text,
+          length: firstPart.text.length
+        });
+      }
+      setHasAppendedQuery(true);
+      // URL에서 쿼리 파라미터 제거
+      window.history.replaceState({}, '', `/chat/${id}`);
+      return;
+    }
+
+    // 클라이언트 사이드 URL 파라미터 처리 (폴백 - 서버에서 처리되지 않은 경우만)
+    const urlParams = new URLSearchParams(window.location.search);
+    const rawQuery = urlParams.get('q') || urlParams.get('query');
+    
+    if (rawQuery && !hasAppendedQuery && initialMessages.length === 0) {
+      console.log('🟡 클라이언트에서 URL 파라미터 처리:', {
+        text: rawQuery,
+        length: rawQuery.length
+      });
+      
       sendMessage({
         role: 'user' as const,
-        parts: [{ type: 'text', text: query }],
+        parts: [{ type: 'text', text: rawQuery }],
       });
 
       setHasAppendedQuery(true);
+      // URL에서 쿼리 파라미터 제거
       window.history.replaceState({}, '', `/chat/${id}`);
     }
-  }, [query, sendMessage, hasAppendedQuery, id]);
+  }, [sendMessage, hasAppendedQuery, id, initialMessages]);
 
   const { data: votes } = useSWR<Array<Vote>>(
     messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
@@ -137,16 +165,20 @@ export function Chat({
           session={session}
         />
 
-        <Messages
-          chatId={id}
-          status={status}
-          votes={votes}
-          messages={messages}
-          setMessages={setMessages}
-          regenerate={regenerate}
-          isReadonly={isReadonly}
-          isArtifactVisible={isArtifactVisible}
-        />
+        {isHelpMode && messages.length === 0 ? (
+          <HelpContent category={helpCategory} />
+        ) : (
+          <Messages
+            chatId={id}
+            status={status}
+            votes={votes}
+            messages={messages}
+            setMessages={setMessages}
+            regenerate={regenerate}
+            isReadonly={isReadonly}
+            isArtifactVisible={isArtifactVisible}
+          />
+        )}
 
         <div className="sticky bottom-0 flex gap-2 px-4 pb-4 mx-auto w-full bg-background md:pb-6 md:max-w-3xl z-[1] border-t-0">
           {!isReadonly && (
@@ -162,6 +194,7 @@ export function Chat({
               setMessages={setMessages}
               sendMessage={sendMessage}
               selectedVisibilityType={visibilityType}
+              isHelpMode={isHelpMode}
             />
           )}
         </div>

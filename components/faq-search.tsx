@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -19,7 +20,10 @@ interface SearchResult {
   results: FAQ[];
 }
 
-export const FAQSearch = () => {
+interface FAQSearchProps {}
+
+export const FAQSearch = ({}: FAQSearchProps) => {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FAQ[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -148,23 +152,33 @@ export const FAQSearch = () => {
                   </motion.div>
                 ))}
                 <div className="p-4 bg-gray-50 text-center">
-                  <Link
-                    href={`/chat?q=${encodeURIComponent(query)}`}
-                    className="text-sm text-blue-600 hover:text-blue-700"
+                  <button
+                    onClick={() => {
+                      console.log('FAQ 검색에서 AI 상담사 연결:', query);
+                      setIsOpen(false);
+                      setQuery('');
+                      router.push(`/chat?q=${encodeURIComponent(query)}`);
+                    }}
+                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors"
                   >
                     AI 상담사에게 &quot;{query}&quot; 질문하기 →
-                  </Link>
+                  </button>
                 </div>
               </div>
             ) : query.length > 0 ? (
               <div className="p-4 text-center">
                 <p className="text-gray-500 mb-3">검색 결과가 없습니다</p>
-                <Link
-                  href={`/chat?q=${encodeURIComponent(query)}`}
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                <button
+                  onClick={() => {
+                    console.log('FAQ 검색 결과 없음 - AI 상담사 연결:', query);
+                    setIsOpen(false);
+                    setQuery('');
+                    router.push(`/chat?q=${encodeURIComponent(query)}`);
+                  }}
+                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors"
                 >
                   AI 상담사에게 &quot;{query}&quot; 질문하기 →
-                </Link>
+                </button>
               </div>
             ) : null}
           </motion.div>

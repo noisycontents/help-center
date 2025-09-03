@@ -2,6 +2,8 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { 
   BookOpen, 
   AlertCircle, 
@@ -10,10 +12,14 @@ import {
   RotateCcw, 
   Smartphone, 
   Award,
-  HelpCircle
+  HelpCircle,
+  MessageCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { FAQSearch } from './faq-search';
 import { FAQModal } from './faq-modal';
+import { Button } from './ui/button';
+import type { FAQ } from '@/lib/db/schema';
 
 const categories = [
   {
@@ -82,7 +88,110 @@ const categories = [
   },
 ];
 
-export const FAQCategories = () => {
+interface FAQCategoriesProps {
+  selectedCategory?: string;
+}
+
+export const FAQCategories = ({ selectedCategory }: FAQCategoriesProps) => {
+  const router = useRouter();
+  const [categoryFAQs, setCategoryFAQs] = useState<FAQ[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // 선택된 카테고리의 FAQ 로드
+  useEffect(() => {
+    if (selectedCategory) {
+      const category = categories.find(cat => cat.id === selectedCategory);
+      if (category) {
+        setLoading(true);
+        fetch(`/api/faq/category/${encodeURIComponent(category.tag)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setCategoryFAQs(data.results);
+            }
+          })
+          .catch(error => {
+            console.error('카테고리 FAQ 로드 오류:', error);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
+    } else {
+      setCategoryFAQs([]);
+    }
+  }, [selectedCategory]);
+
+  // 카테고리별 FAQ 표시
+  if (selectedCategory) {
+    const category = categories.find(cat => cat.id === selectedCategory);
+    
+    return (
+      <>
+        <FAQModal />
+        <div className="w-full max-w-3xl mx-auto px-6 py-8">
+          {/* 뒤로가기 및 카테고리 제목 */}
+          <div className="flex items-center gap-4 mb-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/chat?mode=help')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              뒤로가기
+            </Button>
+            <div className="flex items-center gap-3">
+              {category && (
+                <>
+                  <category.icon className="w-6 h-6 text-blue-600" />
+                  <h1 className="text-2xl font-bold text-gray-900">{category.name}</h1>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* FAQ 목록 */}
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">FAQ를 불러오는 중...</p>
+            </div>
+          ) : categoryFAQs.length > 0 ? (
+            <div className="space-y-4">
+              {categoryFAQs.map((faq, index) => (
+                <motion.div
+                  key={faq.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                    {faq.question}
+                  </h3>
+                  <div className="text-gray-700 whitespace-pre-wrap">
+                    {faq.content}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">이 카테고리에 등록된 FAQ가 없습니다.</p>
+              <Button
+                onClick={() => router.push('/chat')}
+                className="flex items-center gap-2"
+              >
+                <MessageCircle className="w-4 h-4" />
+                AI 상담사에게 문의하기
+              </Button>
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <FAQModal />
@@ -114,7 +223,7 @@ export const FAQCategories = () => {
               transition={{ delay: index * 0.1 }}
             >
               <Link
-                href={`/help/${category.id}`}
+                href={`/chat?mode=help&category=${category.id}`}
                 className={`block p-6 rounded-xl border-2 hover:shadow-lg transition-all duration-200 ${category.color} hover:scale-105`}
               >
                 <div className="flex items-start space-x-4">

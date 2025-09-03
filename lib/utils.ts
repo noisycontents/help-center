@@ -68,7 +68,7 @@ type ResponseMessage = ResponseMessageWithoutId & { id: string };
 
 export function getMostRecentUserMessage(messages: Array<UIMessage>) {
   const userMessages = messages.filter((message) => message.role === 'user');
-  return userMessages.at(-1);
+  return userMessages.length > 0 ? userMessages.at(-1) : undefined;
 }
 
 export function getDocumentTimestampByIndex(
@@ -86,6 +86,8 @@ export function getTrailingMessageId({
 }: {
   messages: Array<ResponseMessage>;
 }): string | null {
+  if (messages.length === 0) return null;
+  
   const trailingMessage = messages.at(-1);
 
   if (!trailingMessage) return null;

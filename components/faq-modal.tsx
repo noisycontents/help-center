@@ -55,7 +55,12 @@ export const FAQModal = () => {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl max-h-[85vh] mx-4 bg-white rounded-xl shadow-2xl z-50 flex flex-col"
+            className="fixed inset-4 md:inset-8 lg:inset-16 xl:inset-24 w-auto max-w-4xl max-h-[85vh] mx-auto my-auto bg-white rounded-xl shadow-2xl z-50 flex flex-col"
+            style={{
+              transform: 'translate(-50%, -50%)',
+              width: 'min(90vw, 48rem)',
+              height: 'min(85vh, 36rem)'
+            }}
             role="dialog"
             aria-labelledby="faq-modal-title"
             aria-modal="true"

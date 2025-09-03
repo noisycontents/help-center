@@ -9,7 +9,24 @@ import {
   primaryKey,
   foreignKey,
   boolean,
+  pgEnum,
+  bigserial,
+  integer,
+  customType,
 } from 'drizzle-orm/pg-core';
+
+// pgvector 타입 정의
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return 'vector(1536)';
+  },
+  toDriver(value: number[]): string {
+    return JSON.stringify(value);
+  },
+  fromDriver(value: string): number[] {
+    return JSON.parse(value);
+  },
+});
 
 export const user = pgTable('User', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
@@ -31,6 +48,52 @@ export const faq = pgTable('FAQ', {
 });
 
 export type FAQ = InferSelectModel<typeof faq>;
+
+// FAQ 종류 enum 정의
+export const faqKindEnum = pgEnum('faq_kind', ['public', 'internal']);
+
+// 내부용 FAQ 테이블
+export const faqInternal = pgTable('FAQ_Internal', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  brand: varchar('brand', { length: 100 }).notNull(),
+  tag: varchar('tag', { length: 100 }),
+  question: text('question').notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+});
+
+export type FAQInternal = InferSelectModel<typeof faqInternal>;
+
+// FAQ 청크 임베딩 테이블
+export const faqChunks = pgTable('FAQ_Chunks', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  kind: faqKindEnum('kind').notNull(),
+  sourceId: uuid('source_id').notNull(),
+  brand: varchar('brand', { length: 100 }),
+  tag: varchar('tag', { length: 100 }),
+  chunkIdx: integer('chunk_idx').notNull(),
+  content: text('content').notNull(),
+  embedding: vector('embedding'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export type FAQChunks = InferSelectModel<typeof faqChunks>;
+
+// 상품 테이블
+export const product = pgTable('Product', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  sku: varchar('sku', { length: 64 }).notNull().unique(),
+  language: text('language').notNull(),
+  category: text('category'),
+  productName: text('product_name').notNull(),
+  price: integer('price').notNull(),
+  discountPrice: integer('discount_price'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export type Product = InferSelectModel<typeof product>;
 
 export const chat = pgTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),

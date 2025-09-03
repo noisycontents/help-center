@@ -9,9 +9,9 @@ import { AutoLoginCheck } from '@/components/auto-login-check';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://chat.vercel.ai'),
-  title: 'Next.js Chatbot Template with OpenAI!',
-  description: 'Next.js chatbot template using OpenAI and the AI SDK.',
+  metadataBase: new URL('https://help.studymini.com'), // chat.vercel.ai -> help.studymini.com
+  title: '미니학습지 헬프센터',
+  description: '미니학습지 관련 궁금한 점을 AI 상담사에게 문의하세요',
 };
 
 export const viewport = {

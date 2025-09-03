@@ -71,6 +71,20 @@
       "when": 1756720218146,
       "tag": "0009_sweet_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1756777366568,
+      "tag": "0010_kind_spitfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1756782966841,
+      "tag": "0011_slow_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

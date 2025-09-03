@@ -78,17 +78,24 @@ const groupChatsByDate = (chats: Chat[]): GroupedChats => {
 
 export function getChatHistoryPaginationKey(
   pageIndex: number,
-  previousPageData: ChatHistory,
+  previousPageData: ChatHistory | null | undefined,
 ) {
-  if (previousPageData && previousPageData.hasMore === false) {
+  // 첫 번째 페이지
+  if (pageIndex === 0) return `/api/history?limit=${PAGE_SIZE}`;
+
+  // previousPageData가 없거나 더 이상 데이터가 없는 경우
+  if (!previousPageData || previousPageData.hasMore === false) {
     return null;
   }
 
-  if (pageIndex === 0) return `/api/history?limit=${PAGE_SIZE}`;
+  // chats 배열이 존재하고 유효한지 확인
+  if (!previousPageData.chats || !Array.isArray(previousPageData.chats) || previousPageData.chats.length === 0) {
+    return null;
+  }
 
   const firstChatFromPage = previousPageData.chats.at(-1);
 
-  if (!firstChatFromPage) return null;
+  if (!firstChatFromPage || !firstChatFromPage.id) return null;
 
   return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
 }

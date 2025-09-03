@@ -46,7 +46,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       <SidebarContent>
         <div className="px-2 py-2 space-y-1">
           <Link
-            href="/help"
+            href="/chat?mode=help"
             onClick={() => setOpenMobile(false)}
             className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
           >
