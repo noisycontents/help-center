@@ -814,14 +814,10 @@ export async function searchFAQChunks({
 
     const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
-    let dbQuery = db
-      .select()
-      .from(faqChunks)
-      .limit(limit);
-
-    if (whereClause) {
-      dbQuery = dbQuery.where(whereClause);
-    }
+    // where 조건이 있는 경우와 없는 경우를 분리해서 처리
+    const dbQuery = whereClause 
+      ? db.select().from(faqChunks).where(whereClause).limit(limit)
+      : db.select().from(faqChunks).limit(limit);
 
     // 벡터 검색은 추후 구현 (임베딩이 제공된 경우)
     if (embedding) {
