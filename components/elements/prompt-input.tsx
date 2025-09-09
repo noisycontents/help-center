@@ -74,7 +74,7 @@ export const PromptInputTextarea = ({
       className={cn(
         'flex-1 resize-none rounded-none border-none shadow-none outline-none ring-0',
         'px-4 min-h-[48px]',
-        disableAutoResize ? 'field-sizing-fixed' : resizeOnNewLinesOnly ? 'field-sizing-fixed' : 'field-sizing-content max-h-[6lh]',
+        'field-sizing-fixed',
         'bg-transparent dark:bg-transparent',
         'focus-visible:ring-0',
         'leading-6',
@@ -83,7 +83,9 @@ export const PromptInputTextarea = ({
       style={{
         paddingTop: '12px',
         paddingBottom: '12px',
-        lineHeight: '1.5',
+        lineHeight: '1.4',
+        height: '48px',
+        maxHeight: '48px',
       }}
       name="message"
       onChange={(e) => {

@@ -31,33 +31,41 @@ async function searchInternalFAQ(query: string) {
   }
 }
 
-// 벡터 검색 함수 (내부 FAQ 포함)
+// 벡터 검색 함수 (내부 FAQ 포함) - 성능 최적화
 async function executeVectorSearch(query: string, includeInternal: boolean = false, limit: number = 5) {
   try {
-    let allResults = [];
+    // 병렬로 검색 실행하여 속도 향상
+    const searchPromises = [];
     
-    // 공개 FAQ 검색
-    const publicResults = await searchFAQ(query);
-    const publicMapped = publicResults.slice(0, Math.ceil(limit / 2)).map(faq => ({
-      ...faq,
-      kind: 'public',
-      isInternal: false,
-      score: 0.6, // 공개 FAQ는 중간 점수
-    }));
-    allResults.push(...publicMapped);
-
-    // 내부 FAQ 검색 (includeInternal이 true일 때) - 우선 처리
+    // 공개 FAQ 검색 (항상 실행)
+    searchPromises.push(
+      searchFAQ(query).then(results => 
+        results.slice(0, Math.ceil(limit / 2)).map(faq => ({
+          ...faq,
+          kind: 'public',
+          isInternal: false,
+          score: 0.6,
+        }))
+      )
+    );
+    
+    // 내부 FAQ 검색 (조건부 실행)
     if (includeInternal) {
-      const internalResults = await searchInternalFAQ(query);
-      const internalMapped = internalResults.slice(0, Math.ceil(limit * 0.6)).map((faq: any) => ({
-        ...faq,
-        kind: 'internal',
-        isInternal: true,
-        score: 0.95, // 내부 FAQ는 매우 높은 점수 (더 상세한 정보)
-      }));
-      // 내부 FAQ를 앞에 배치
-      allResults.unshift(...internalMapped);
+      searchPromises.push(
+        searchInternalFAQ(query).then(results => 
+          results.slice(0, Math.ceil(limit * 0.6)).map((faq: any) => ({
+            ...faq,
+            kind: 'internal',
+            isInternal: true,
+            score: 0.95,
+          }))
+        )
+      );
     }
+    
+    // 병렬 검색 결과 대기
+    const searchResults = await Promise.all(searchPromises);
+    const allResults = searchResults.flat();
 
     return {
       success: allResults.length > 0,

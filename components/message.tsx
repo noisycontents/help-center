@@ -85,9 +85,7 @@ const PurePreviewMessage = ({
           )}
 
           <div
-            className={cn('flex flex-col gap-4 w-full', {
-              'min-h-96': message.role === 'assistant' && requiresScrollPadding,
-            })}
+            className={cn('flex flex-col gap-4 w-full')}
           >
             {attachmentsFromMessage.length > 0 && (
               <div
@@ -330,9 +328,9 @@ export const ThinkingMessage = () => {
   return (
     <motion.div
       data-testid="message-assistant-loading"
-      className="px-4 mx-auto w-full max-w-3xl group/message min-h-96"
+      className="px-4 mx-auto w-full max-w-3xl group/message"
       initial={{ y: 5, opacity: 0 }}
-      animate={{ y: 0, opacity: 1, transition: { delay: 1 } }}
+      animate={{ y: 0, opacity: 1, transition: { delay: 0.3 } }}
       data-role={role}
     >
       <div

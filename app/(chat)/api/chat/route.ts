@@ -163,7 +163,7 @@ export async function POST(request: Request) {
                   'searchFAQTool',
                   'requestSuggestions',
                 ],
-          experimental_transform: smoothStream({ chunking: 'word' }),
+          experimental_transform: smoothStream({ chunking: 'word', delayInMs: 10 }),
           tools: {
             searchFAQTool,
             requestSuggestions: requestSuggestions({
