@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { stripHTML } from '@/lib/html-utils';
 
 interface FAQ {
   id: string;
@@ -145,7 +146,7 @@ export const FAQSearch = ({}: FAQSearchProps) => {
                           {faq.question}
                         </p>
                         <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                          {faq.content.substring(0, 100)}...
+                          {stripHTML(faq.content).substring(0, 100)}...
                         </p>
                       </div>
                     </div>

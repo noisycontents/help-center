@@ -15,12 +15,16 @@ import {
   HelpCircle,
   MessageCircle,
   ArrowLeft,
-  User
+  User,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { FAQSearch } from './faq-search';
 import { FAQModal } from './faq-modal';
 import { Button } from './ui/button';
 import type { FAQ } from '@/lib/db/schema';
+import { createSafeHTML } from '@/lib/html-utils';
+import { HTMLContent } from './html-content';
 
 const categories = [
   {
@@ -105,6 +109,20 @@ export const FAQCategories = ({ selectedCategory }: FAQCategoriesProps) => {
   const router = useRouter();
   const [categoryFAQs, setCategoryFAQs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(false);
+  const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
+
+  // FAQ 펼치기/접기 토글
+  const toggleFAQ = (faqId: string) => {
+    setExpandedFAQs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(faqId)) {
+        newSet.delete(faqId);
+      } else {
+        newSet.add(faqId);
+      }
+      return newSet;
+    });
+  };
 
   // 선택된 카테고리의 FAQ 로드
   useEffect(() => {
@@ -165,26 +183,55 @@ export const FAQCategories = ({ selectedCategory }: FAQCategoriesProps) => {
             <div className="text-center py-12">
               <p className="text-gray-500">FAQ를 불러오는 중...</p>
             </div>
-          ) : categoryFAQs.length > 0 ? (
-            <div className="space-y-4">
-              {categoryFAQs.map((faq, index) => (
-                <motion.div
-                  key={faq.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    {faq.question}
-                  </h3>
-                  <div className="text-gray-700 whitespace-pre-wrap">
-                    {faq.content}
-                  </div>
-                </motion.div>
-              ))}
+          ) : !loading && categoryFAQs.length > 0 ? (
+            <div className="space-y-2">
+              {categoryFAQs.map((faq, index) => {
+                const isExpanded = expandedFAQs.has(faq.id);
+                return (
+                  <motion.div
+                    key={faq.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+                  >
+                    {/* 질문 헤더 (클릭 가능) */}
+                    <button
+                      onClick={() => toggleFAQ(faq.id)}
+                      className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    >
+                      <h3 className="text-lg font-semibold text-gray-900 flex-1">
+                        {faq.question}
+                      </h3>
+                      {isExpanded ? (
+                        <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-3" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0 ml-3" />
+                      )}
+                    </button>
+                    
+                    {/* 답변 내용 (조건부 렌더링) */}
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="border-t border-gray-100"
+                      >
+                        <div className="px-6 py-4">
+                          <HTMLContent 
+                            content={faq.content}
+                            className="text-gray-700 prose prose-sm max-w-none [&>p]:mb-3 [&>ol]:mb-3 [&>ul]:mb-3 [&>li]:mb-1"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
-          ) : (
+          ) : !loading ? (
             <div className="text-center py-12">
               <p className="text-gray-500 mb-4">이 카테고리에 등록된 FAQ가 없습니다.</p>
               <Button
@@ -195,7 +242,7 @@ export const FAQCategories = ({ selectedCategory }: FAQCategoriesProps) => {
                 AI 상담사에게 문의하기
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
       </>
     );

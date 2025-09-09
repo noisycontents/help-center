@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { createSafeHTML } from '@/lib/html-utils';
 
 interface FAQ {
   id: string;
@@ -87,11 +88,10 @@ export const FAQModal = () => {
 
             {/* 내용 */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="prose max-w-none text-gray-700">
-                <div className="whitespace-pre-line leading-relaxed">
-                  {selectedFAQ.content}
-                </div>
-              </div>
+              <div 
+                className="prose prose-sm max-w-none text-gray-700 leading-relaxed [&>p]:mb-3 [&>ol]:mb-3 [&>ul]:mb-3 [&>li]:mb-1"
+                {...createSafeHTML(selectedFAQ.content)}
+              />
             </div>
           </motion.div>
         </>
