@@ -14,7 +14,8 @@ import {
   Award,
   HelpCircle,
   MessageCircle,
-  ArrowLeft
+  ArrowLeft,
+  User
 } from 'lucide-react';
 import { FAQSearch } from './faq-search';
 import { FAQModal } from './faq-modal';
@@ -85,6 +86,14 @@ const categories = [
     description: '결제 방법, 할부, 영수증 발급 등',
     icon: CreditCard,
     color: 'bg-yellow-50 text-yellow-600 border-yellow-200',
+  },
+  {
+    id: 'account',
+    name: '계정 관리',
+    tag: '계정',
+    description: '로그인, 회원가입, 비밀번호 변경 등',
+    icon: User,
+    color: 'bg-gray-50 text-gray-600 border-gray-200',
   },
 ];
 
