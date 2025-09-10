@@ -9,8 +9,13 @@ export function AutoLoginCheck() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // 로딩 중이거나 이미 로그인되어 있으면 스킵
-    if (status === 'loading' || session) {
+    // 로딩 중이면 스킵
+    if (status === 'loading') {
+      return;
+    }
+    
+    // 이미 로그인되어 있으면 스킵
+    if (session) {
       return;
     }
 
@@ -61,10 +66,12 @@ export function AutoLoginCheck() {
       }
     };
 
-    // 페이지 로드 후 1초 뒤에 확인 (초기 로딩 완료 후)
-    const timer = setTimeout(checkMainSiteLogin, 1000);
-    
-    return () => clearTimeout(timer);
+    // 즉시 guest 로그인 시도 (더 빠른 처리)
+    console.log('세션이 없음, guest 로그인 시도');
+    signIn('guest', { 
+      callbackUrl: window.location.pathname + window.location.search,
+      redirect: false 
+    });
   }, [session, status, searchParams]);
 
   return null; // UI 렌더링 없음

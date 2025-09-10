@@ -86,10 +86,11 @@ export async function POST(request: Request) {
     const session = await auth();
 
     if (!session?.user) {
+      console.log('❌ 세션 없음 - guest 사용자 생성 필요');
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    console.log('Session user:', session.user);
+    console.log('✅ Session user:', session.user);
 
     const userType: UserType = session.user.type;
 
