@@ -556,10 +556,11 @@ export async function getMessageCountByUserId({
   id,
   differenceInHours,
 }: { id: string; differenceInHours: number }) {
+  const twentyFourHoursAgo = new Date(
+    Date.now() - differenceInHours * 60 * 60 * 1000,
+  );
+  
   try {
-    const twentyFourHoursAgo = new Date(
-      Date.now() - differenceInHours * 60 * 60 * 1000,
-    );
 
     // 🚀 성능 최적화: 인덱스 활용을 위한 쿼리 개선
     // JOIN 대신 서브쿼리로 변경하여 인덱스 효율성 향상
