@@ -59,14 +59,13 @@ const PurePreviewMessage = ({
   useDataStream();
 
   return (
-    <AnimatePresence>
-      <motion.div
-        data-testid={`message-${message.role}`}
-        className="px-4 mx-auto w-full max-w-3xl group/message"
-        initial={{ y: 5, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        data-role={message.role}
-      >
+    <motion.div
+      data-testid={`message-${message.role}`}
+      className="px-4 mx-auto w-full max-w-3xl group/message"
+      initial={{ y: 5, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      data-role={message.role}
+    >
         <div
           className={cn(
             'flex gap-4 w-full group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl',
@@ -149,7 +148,17 @@ const PurePreviewMessage = ({
                           'bg-transparent': message.role === 'assistant',
                         })}
                       >
-                        <Response>{sanitizeText(part.text)}</Response>
+                        {/* Rate limit 메시지에서는 HTML 허용 */}
+                        {message.role === 'assistant' && part.text.includes('질문 한도에 도달') ? (
+                          <div 
+                            className="prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{ 
+                              __html: part.text 
+                            }} 
+                          />
+                        ) : (
+                          <Response>{sanitizeText(part.text)}</Response>
+                        )}
                       </MessageContent>
                     </div>
                   );
@@ -304,7 +313,6 @@ const PurePreviewMessage = ({
           </div>
         </div>
       </motion.div>
-    </AnimatePresence>
   );
 };
 
@@ -330,7 +338,7 @@ export const ThinkingMessage = () => {
       data-testid="message-assistant-loading"
       className="px-4 mx-auto w-full max-w-3xl group/message"
       initial={{ y: 5, opacity: 0 }}
-      animate={{ y: 0, opacity: 1, transition: { delay: 0.3 } }}
+      animate={{ y: 0, opacity: 1, transition: { delay: 0.1 } }}
       data-role={role}
     >
       <div

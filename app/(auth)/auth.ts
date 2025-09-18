@@ -185,27 +185,37 @@ export const {
   ],
   callbacks: {
     async jwt({ token, user, account }) {
-      console.log('JWT 콜백 - token:', token.sub, 'user:', user?.id, 'account:', account?.provider);
+      // 🚀 성능 최적화: 개발 환경에서만 로그 출력
+      if (process.env.NODE_ENV === 'development' && user) {
+        console.log('JWT 콜백 - token:', token.sub, 'user:', user?.id, 'account:', account?.provider);
+      }
       
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
         token.name = user.name;
-        console.log('JWT 콜백 - 사용자 정보 업데이트:', { id: token.id, type: token.type, name: token.name });
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('JWT 콜백 - 사용자 정보 업데이트:', { id: token.id, type: token.type, name: token.name });
+        }
       }
-
-      // WordPress OAuth 사용자는 signIn 콜백에서 이미 처리됨
 
       return token;
     },
     async session({ session, token }) {
-      console.log('세션 콜백 - token:', { id: token.id, type: token.type, name: token.name });
+      // 🚀 성능 최적화: 개발 환경에서만 로그 출력
+      if (process.env.NODE_ENV === 'development') {
+        console.log('세션 콜백 - token:', { id: token.id, type: token.type, name: token.name });
+      }
       
       if (session.user) {
         session.user.id = token.id;
         session.user.type = token.type;
         session.user.name = token.name;
-        console.log('세션 콜백 - 최종 세션:', { id: session.user.id, type: session.user.type, name: session.user.name, email: session.user.email });
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('세션 콜백 - 최종 세션:', { id: session.user.id, type: session.user.type, name: session.user.name, email: session.user.email });
+        }
       }
 
       return session;

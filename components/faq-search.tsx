@@ -90,7 +90,7 @@ export const FAQSearch = ({}: FAQSearchProps) => {
           onChange={(e) => handleSearch(e.target.value)}
           onFocus={() => setIsOpen(true)}
           placeholder="궁금한 내용을 검색해보세요..."
-          className="block w-full pl-10 pr-12 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+          className="block w-full pl-10 pr-12 py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-0 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 text-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         />
         {query && (
           <button
@@ -155,14 +155,14 @@ export const FAQSearch = ({}: FAQSearchProps) => {
                 <div className="p-4 bg-gray-50 text-center">
                   <button
                     onClick={() => {
-                      console.log('FAQ 검색에서 AI 상담사 연결:', query);
+                      console.log('FAQ 검색에서 AI 상담사 연결');
                       setIsOpen(false);
                       setQuery('');
-                      router.push(`/chat?q=${encodeURIComponent(query)}`);
+                      router.push('/chat');
                     }}
                     className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors"
                   >
-                    AI 상담사에게 &quot;{query}&quot; 질문하기 →
+                    AI 상담사에게 질문하기 →
                   </button>
                 </div>
               </div>
@@ -171,14 +171,14 @@ export const FAQSearch = ({}: FAQSearchProps) => {
                 <p className="text-gray-500 mb-3">검색 결과가 없습니다</p>
                 <button
                   onClick={() => {
-                    console.log('FAQ 검색 결과 없음 - AI 상담사 연결:', query);
+                    console.log('FAQ 검색 결과 없음 - AI 상담사 연결');
                     setIsOpen(false);
                     setQuery('');
-                    router.push(`/chat?q=${encodeURIComponent(query)}`);
+                    router.push('/chat');
                   }}
                   className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors"
                 >
-                  AI 상담사에게 &quot;{query}&quot; 질문하기 →
+                  AI 상담사에게 질문하기 →
                 </button>
               </div>
             ) : null}

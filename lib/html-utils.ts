@@ -91,7 +91,10 @@ export function getVimeoVideoId(url: string): string | null {
  * URL이 이미지인지 확인합니다.
  */
 export function isImageUrl(url: string): boolean {
-  return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url);
+  // 더 관대한 이미지 URL 감지 (studymini.com의 이미지 경로 포함)
+  return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url) || 
+         /wp-content\/uploads.*\.(jpg|jpeg|png|gif|webp|svg)/i.test(url) ||
+         /media\.studymini\.com/i.test(url);
 }
 
 /**
@@ -162,7 +165,11 @@ export function processMediaContent(content: string): string {
     // 이미지 URL 처리
     if (isImageUrl(url)) {
       return `<div style="margin: 16px 0; text-align: center;">
-        <img src="${url}" alt="FAQ 이미지" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" loading="lazy" />
+        <img 
+          src="${url}" 
+          alt="FAQ 이미지" 
+          style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" 
+        />
       </div>`;
     }
     

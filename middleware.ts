@@ -22,18 +22,21 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
+    // 🚀 성능 최적화: 개발 환경에서만 토큰 로그 출력
     const token = await getToken({
       req: request,
       secret: process.env.AUTH_SECRET,
       secureCookie: !isDevelopmentEnvironment,
     });
     
-    console.log('미들웨어 - 토큰 확인:', { 
-      pathname, 
-      hasToken: !!token, 
-      tokenId: token?.id,
-      tokenType: token?.type 
-    });
+    // 개발 환경에서만 상세 로그 출력
+    if (isDevelopmentEnvironment && pathname.startsWith('/api/chat')) {
+      console.log('미들웨어 - 토큰 확인:', { 
+        pathname, 
+        hasToken: !!token, 
+        tokenType: token?.type 
+      });
+    }
     
     return NextResponse.next();
   } catch (error) {

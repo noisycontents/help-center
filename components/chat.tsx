@@ -66,7 +66,7 @@ export function Chat({
   } = useChat<ChatMessage>({
     id,
     messages: initialMessages,
-    experimental_throttle: 100,
+    experimental_throttle: 10,
     generateId: generateUUID,
     transport: new DefaultChatTransport({
       api: '/api/chat',
@@ -200,22 +200,7 @@ export function Chat({
         </div>
       </div>
 
-      <Artifact
-        chatId={id}
-        input={input}
-        setInput={setInput}
-        status={status}
-        stop={stop}
-        attachments={attachments}
-        setAttachments={setAttachments}
-        sendMessage={sendMessage}
-        messages={messages}
-        setMessages={setMessages}
-        regenerate={regenerate}
-        votes={votes}
-        isReadonly={isReadonly}
-        selectedVisibilityType={visibilityType}
-      />
+      {/* Artifact 기능 비활성화 - FAQ 시스템에서는 사용하지 않음 */}
     </>
   );
 }

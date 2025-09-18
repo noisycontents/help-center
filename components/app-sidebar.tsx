@@ -48,7 +48,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           <Link
             href="/chat?mode=help"
             onClick={() => setOpenMobile(false)}
-            className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-800 bg-white dark:bg-gray-900 rounded-md transition-colors"
           >
             <span>📚</span>
             <span className="font-semibold">도움말 센터</span>
@@ -56,7 +56,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           <Link
             href="/chat"
             onClick={() => setOpenMobile(false)}
-            className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-800 bg-white dark:bg-gray-900 rounded-md transition-colors"
           >
             <span>💬</span>
             <span className="font-semibold">무엇이든 물어보세요</span>

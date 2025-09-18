@@ -61,6 +61,18 @@ export async function getUser(email: string): Promise<Array<User>> {
   }
 }
 
+export async function getUserById(id: string): Promise<User | null> {
+  try {
+    const [selectedUser] = await db.select().from(user).where(eq(user.id, id));
+    return selectedUser || null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get user by id',
+    );
+  }
+}
+
 export async function createUser(email: string, password: string) {
   const hashedPassword = generateHashedPassword(password);
 
@@ -264,13 +276,23 @@ export async function saveMessages({
   }
 }
 
-export async function getMessagesByChatId({ id }: { id: string }) {
+export async function getMessagesByChatId({ 
+  id,
+  limit
+}: { 
+  id: string;
+  limit?: number;
+}) {
   try {
+    // 🚀 성능 최적화: 기본적으로 최근 50개 메시지만 로드
+    const messageLimit = limit || 50;
+    
     return await db
       .select()
       .from(message)
       .where(eq(message.chatId, id))
-      .orderBy(asc(message.createdAt));
+      .orderBy(asc(message.createdAt))
+      .limit(messageLimit);
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',
@@ -513,6 +535,23 @@ export async function updateChatVisiblityById({
   }
 }
 
+export async function updateChatTitleById({
+  chatId,
+  title,
+}: {
+  chatId: string;
+  title: string;
+}) {
+  try {
+    return await db.update(chat).set({ title }).where(eq(chat.id, chatId));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update chat title by id',
+    );
+  }
+}
+
 export async function getMessageCountByUserId({
   id,
   differenceInHours,
@@ -522,13 +561,18 @@ export async function getMessageCountByUserId({
       Date.now() - differenceInHours * 60 * 60 * 1000,
     );
 
+    // 🚀 성능 최적화: 인덱스 활용을 위한 쿼리 개선
+    // JOIN 대신 서브쿼리로 변경하여 인덱스 효율성 향상
     const [stats] = await db
       .select({ count: count(message.id) })
       .from(message)
-      .innerJoin(chat, eq(message.chatId, chat.id))
       .where(
         and(
-          eq(chat.userId, id),
+          // chatId를 통한 필터링을 먼저 적용 (인덱스 활용)
+          inArray(
+            message.chatId,
+            db.select({ id: chat.id }).from(chat).where(eq(chat.userId, id))
+          ),
           gte(message.createdAt, twentyFourHoursAgo),
           eq(message.role, 'user'),
         ),
@@ -537,10 +581,29 @@ export async function getMessageCountByUserId({
 
     return stats?.count ?? 0;
   } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get message count by user id',
-    );
+    // 최적화된 쿼리 실패시 기존 방식으로 폴백
+    try {
+      const [fallbackStats] = await db
+        .select({ count: count(message.id) })
+        .from(message)
+        .innerJoin(chat, eq(message.chatId, chat.id))
+        .where(
+          and(
+            eq(chat.userId, id),
+            gte(message.createdAt, twentyFourHoursAgo),
+            eq(message.role, 'user'),
+          ),
+        )
+        .execute();
+      
+      return fallbackStats?.count ?? 0;
+    } catch (fallbackError) {
+      console.error('메시지 카운트 조회 실패:', fallbackError);
+      throw new ChatSDKError(
+        'bad_request:database',
+        'Failed to get message count by user id',
+      );
+    }
   }
 }
 

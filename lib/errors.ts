@@ -75,40 +75,40 @@ export class ChatSDKError extends Error {
 
 export function getMessageByErrorCode(errorCode: ErrorCode): string {
   if (errorCode.includes('database')) {
-    return 'An error occurred while executing a database query.';
+    return '데이터베이스 쿼리 실행 중 오류가 발생했습니다.';
   }
 
   switch (errorCode) {
     case 'bad_request:api':
-      return "The request couldn't be processed. Please check your input and try again.";
+      return "요청을 처리할 수 없습니다. 입력 내용을 확인한 뒤 다시 시도해주세요.";
 
     case 'unauthorized:auth':
-      return 'You need to sign in before continuing.';
+      return '계속하려면 로그인해야 합니다.';
     case 'forbidden:auth':
-      return 'Your account does not have access to this feature.';
+      return '이 기능에 접근할 수 없는 계정입니다.';
 
     case 'rate_limit:chat':
-      return 'You have exceeded your maximum number of messages for the day. Please try again later.';
-    case 'not_found:chat':
-      return 'The requested chat was not found. Please check the chat ID and try again.';
-    case 'forbidden:chat':
-      return 'This chat belongs to another user. Please check the chat ID and try again.';
-    case 'unauthorized:chat':
-      return 'You need to sign in to view this chat. Please sign in and try again.';
-    case 'offline:chat':
-      return "We're having trouble sending your message. Please check your internet connection and try again.";
+      return `안녕하세요! 😊<br>오늘 질문 한도에 도달하셨습니다.<br><br>📝 로그인하면 추가 질문이 가능합니다.<br>혹은 <a href="/chat?mode=help" style="color: #2563eb; text-decoration: underline;">도움말 센터</a>에서 정보를 찾아보실 수 있습니다.<br><br>🔗 <a href="https://studymini.com/inquiry" target="_blank" style="color: #2563eb; text-decoration: underline;">일대일 문의하기</a><br>1:1 문의 게시판을 통해 문의해 주시면 최대한 빠르게 답변드리겠습니다.<br><br>양해 부탁드립니다. 감사합니다! 🙏`;
+      case 'not_found:chat':
+        return '요청하신 채팅을 찾을 수 없습니다.';
+      case 'forbidden:chat':
+        return '이 채팅은 다른 사용자에게 속해 있습니다.';
+      case 'unauthorized:chat':
+        return '채팅을 보려면 로그인해야 합니다. 로그인 후 다시 시도해주세요.';
+      case 'offline:chat':
+        return '메시지를 보내는 데 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
 
-    case 'not_found:document':
-      return 'The requested document was not found. Please check the document ID and try again.';
-    case 'forbidden:document':
-      return 'This document belongs to another user. Please check the document ID and try again.';
-    case 'unauthorized:document':
-      return 'You need to sign in to view this document. Please sign in and try again.';
-    case 'bad_request:document':
-      return 'The request to create or update the document was invalid. Please check your input and try again.';
+      case 'not_found:document':
+        return '요청하신 문서를 찾을 수 없습니다.';
+      case 'forbidden:document':
+        return '이 문서는 다른 사용자에게 속해 있습니다.';
+      case 'unauthorized:document':
+        return '문서를 보려면 로그인해야 합니다. 로그인 후 다시 시도해주세요.';
+      case 'bad_request:document':
+        return '문서를 생성하거나 업데이트하는 요청이 올바르지 않습니다. 입력 내용을 확인한 뒤 다시 시도해주세요.';
 
     default:
-      return 'Something went wrong. Please try again later.';
+      return '문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
   }
 }
 

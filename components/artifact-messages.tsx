@@ -64,9 +64,7 @@ function PureArtifactMessages({
         />
       ))}
 
-      {status === 'submitted' &&
-        messages.length > 0 &&
-        messages[messages.length - 1].role === 'user' && <ThinkingMessage />}
+      {/* ThinkingMessage는 메인 Messages 컴포넌트에서만 표시 (중복 방지) */}
 
       <motion.div
         ref={messagesEndRef}

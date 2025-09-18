@@ -61,101 +61,26 @@ const faq = pgTable('FAQ', {
 
 async function importFAQ() {
   try {
-    console.log('CSV 파일을 수동으로 파싱하는 중...');
+    console.log('CSV 파일을 파싱하는 중...');
     
-    // CSV 파일을 라인별로 읽기 (수동 파싱)
+    // CSV 파일을 표준 라이브러리로 파싱
     const csvData = readFileSync('ai_chat_doc.csv', 'utf-8');
-    const lines = csvData.split('\n');
-    
-    console.log(`총 ${lines.length}개의 라인을 찾았습니다.`);
-    
-    const records = [];
-    let currentRecord = null;
-    let inRecord = false;
-    let contentBuffer = [];
-    
-    for (let i = 1; i < lines.length; i++) { // 헤더 스킵
-      const line = lines[i];
-      
-      // 새로운 레코드 시작 확인 (일반 패턴과 특수 따옴표 패턴 모두 처리)
-      let recordStartMatch = line.match(/^"미니학습지","([^"]+)","([^"]+)","(.*)$/);
-      
-      // 특수한 따옴표 패턴도 확인 (예: """"수강 완료하기"" 버튼 사용하기")
-      if (!recordStartMatch) {
-        recordStartMatch = line.match(/^"미니학습지","([^"]+)","""""([^"]*)"" ([^"]*)"","(.*)$/);
-        if (recordStartMatch) {
-          // 특수 패턴의 경우 question 재구성
-          recordStartMatch[2] = `"${recordStartMatch[2]}" ${recordStartMatch[3]}`;
-          recordStartMatch[3] = recordStartMatch[4];
-        }
-      }
-      
-      if (recordStartMatch) {
-        // 이전 레코드 완료 처리
-        if (currentRecord) {
-          currentRecord.content = contentBuffer.join('\n').replace(/"$/, '');
-          records.push(currentRecord);
-        }
-        
-        // 새로운 레코드 시작
-        currentRecord = {
-          brand: '미니학습지',
-          tag: recordStartMatch[1],
-          question: recordStartMatch[2],
-          content: recordStartMatch[3]
-        };
-        
-        contentBuffer = [recordStartMatch[3]];
-        inRecord = true;
-        
-        // 이 라인에서 레코드가 완료되는지 확인
-        if (line.endsWith('"') && !line.endsWith('""')) {
-          currentRecord.content = currentRecord.content.replace(/"$/, '');
-          records.push(currentRecord);
-          currentRecord = null;
-          inRecord = false;
-          contentBuffer = [];
-        }
-      } else if (inRecord && line.trim()) {
-        // 기존 레코드의 content 계속
-        contentBuffer.push(line);
-        
-        // 레코드 끝 확인
-        if (line.endsWith('"') && !line.endsWith('""')) {
-          currentRecord.content = contentBuffer.join('\n').replace(/"$/, '');
-          records.push(currentRecord);
-          currentRecord = null;
-          inRecord = false;
-          contentBuffer = [];
-        }
-      }
-    }
-    
-    // 마지막 레코드 처리
-    if (currentRecord) {
-      currentRecord.content = contentBuffer.join('\n').replace(/"$/, '');
-      records.push(currentRecord);
-    }
+    const records = parse(csvData, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true
+    });
 
-    console.log(`수동 파싱 완료: ${records.length}개의 레코드`);
+    console.log(`파싱 완료: ${records.length}개의 레코드`);
     
-    // 누락된 "수강 완료하기" 레코드 수동 추가 (특수 따옴표 문제로 파싱 실패)
-    if (records.length === 56) {
-      console.log('누락된 "수강 완료하기" 레코드를 수동으로 추가하는 중...');
-      records.push({
-        brand: '미니학습지',
-        tag: '수강',
-        question: '"수강 완료하기" 버튼 사용하기',
-        content: `<p>각 강의실에서 학습문답 작성란 위에 <b>"수강 완료하기"</b> 버튼이 있습니다.</p>
-<p><u>사용 방법</u></p>
-<ol>
-<li>⓵ 강의 영상을 모두 시청해도 자동으로 체크되지 않으므로, <u>수강을 마친 후 직접 버튼을 눌러야 합니다.</u></li>
-<li>⓶ "수강 완료하기" 버튼을 누른 강의만 수강률에 반영됩니다.</li>
-<li>⓷ 버튼을 누른 강의도 수강 기간 내에는 언제든 다시 수강할 수 있습니다.</li>
-</ol>
-<p><a href="https://studymini.com/contact" target="_blank"><u>기타 문의하기</u></a></p>`
+    // 첫 몇 개 레코드 확인
+    if (records.length > 0) {
+      console.log('첫 번째 레코드 샘플:', {
+        brand: records[0].brand,
+        tag: records[0].tag,
+        question: records[0].question?.substring(0, 50) + '...',
+        content: records[0].content?.substring(0, 100) + '...'
       });
-      console.log(`총 ${records.length}개의 레코드 (누락 레코드 포함)`);
     }
 
     // 기존 데이터 삭제

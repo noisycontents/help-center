@@ -2,31 +2,40 @@ import { z } from 'zod';
 import { searchFAQ, getFAQByTag } from '@/lib/db/queries';
 import { tool } from 'ai';
 
-// 내부 FAQ 검색 함수
+// 내부 FAQ 검색 함수 - DB 연결 재사용으로 성능 최적화
 async function searchInternalFAQ(query: string) {
+  const { eq, or, like, desc } = require('drizzle-orm');
   const { drizzle } = require('drizzle-orm/postgres-js');
   const postgres = require('postgres');
+  const { faqInternal } = require('@/lib/db/schema');
   
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error('DATABASE_URL이 설정되지 않았습니다.');
   }
 
-  const client = postgres(connectionString);
+  // 기존 연결 재사용 (연결 풀링)
+  const client = postgres(connectionString, { max: 10, idle_timeout: 20 });
+  const db = drizzle(client);
   
   try {
-    const results = await client`
-      SELECT id, brand, tag, question, content, "createdAt", "updatedAt"
-      FROM "FAQ_Internal"
-      WHERE question ILIKE ${'%' + query + '%'} OR content ILIKE ${'%' + query + '%'}
-      ORDER BY "updatedAt" DESC
-      LIMIT 10
-    `;
+    const results = await db
+      .select()
+      .from(faqInternal)
+      .where(
+        or(
+          like(faqInternal.question, `%${query}%`),
+          like(faqInternal.content, `%${query}%`),
+          like(faqInternal.tag, `%${query}%`)
+        )
+      )
+      .orderBy(desc(faqInternal.updatedAt))
+      .limit(10)
+      .execute();
     
-    await client.end();
     return results;
   } catch (error) {
-    await client.end();
+    console.error('Internal FAQ 검색 오류:', error);
     throw error;
   }
 }
@@ -90,68 +99,61 @@ export const searchFAQTool = tool({
   }),
   execute: async ({ query, useVectorSearch = true }) => {
     try {
-      let vectorResults: any[] = [];
-      let keywordResults: any[] = [];
-
-      // 벡터 검색 실행 (우선)
+      // 🚀 성능 최적화: 단일 검색 방식으로 중복 제거
+      let searchResults: any[] = [];
+      
       if (useVectorSearch) {
+        // 벡터 검색 우선 실행 (내부 FAQ 포함)
         try {
-          // 벡터 검색 함수 직접 호출
-          const vectorSearchResult = await executeVectorSearch(query, true, 3);
-          
-          if (vectorSearchResult.success && vectorSearchResult.results) {
-            vectorResults = vectorSearchResult.results;
+          const vectorSearchResult = await executeVectorSearch(query, true, 5);
+          if (vectorSearchResult.success && vectorSearchResult.results.length > 0) {
+            searchResults = vectorSearchResult.results;
           }
         } catch (vectorError) {
           console.warn('벡터 검색 실패, 키워드 검색으로 대체:', vectorError);
+          useVectorSearch = false; // 키워드 검색으로 폴백
         }
       }
-
-      // 키워드 검색 (보완용)
-      const keywordSearchResults = await searchFAQ(query);
-      if (keywordSearchResults.length > 0) {
-        // 키워드 검색 결과 점수 계산
-        const scoredKeywordResults = keywordSearchResults.map(faq => {
-          let score = 0;
-          const queryLower = query.toLowerCase();
-          const questionLower = faq.question.toLowerCase();
-          const contentLower = faq.content.toLowerCase();
-          
-          if (questionLower.includes(queryLower)) score += 10;
-          
-          const queryWords = queryLower.split(/\s+/);
-          queryWords.forEach((word: string) => {
-            if (questionLower.includes(word)) score += 3;
-            if (contentLower.includes(word)) score += 1;
-          });
-          
-          return { 
-            ...faq, 
-            score: score * 0.1, // 벡터 검색보다 낮은 가중치
-            kind: 'public',
-            isInternal: false 
-          };
-        });
-
-        keywordResults = scoredKeywordResults.slice(0, 2);
-      }
-
-      // 결과 통합 및 중복 제거
-      const allResults = [...vectorResults, ...keywordResults];
-      const uniqueResults = new Map();
       
-      for (const result of allResults) {
-        const key = result.id;
-        if (!uniqueResults.has(key) || (uniqueResults.get(key).score < result.score)) {
-          uniqueResults.set(key, result);
-        }
+      // 벡터 검색 실패 또는 결과가 없는 경우 키워드 검색 실행
+      if (!useVectorSearch || searchResults.length === 0) {
+        // 병렬 검색: Public FAQ + Internal FAQ
+        const [publicResults, internalResults] = await Promise.all([
+          searchFAQ(query).then(results => 
+            results.map(faq => ({ ...faq, kind: 'public', isInternal: false, score: 0.6 }))
+          ),
+          searchInternalFAQ(query).then(results => 
+            results.map(faq => ({ ...faq, kind: 'internal', isInternal: true, score: 0.9 }))
+          ).catch(() => []) // Internal FAQ 검색 실패시 빈 배열 반환
+        ]);
+
+        // 키워드 검색 결과 점수 계산 및 통합
+        const allKeywordResults = [...publicResults, ...internalResults];
+        searchResults = allKeywordResults
+          .map(faq => {
+            let score = faq.score || 0.6; // 기본 점수
+            const queryLower = query.toLowerCase();
+            const questionLower = faq.question.toLowerCase();
+            const contentLower = faq.content.toLowerCase();
+            
+            // 점수 가중치 계산
+            if (questionLower.includes(queryLower)) score += 0.4;
+            
+            const queryWords = queryLower.split(/\s+/);
+            queryWords.forEach((word: string) => {
+              if (word.length > 1) { // 단일 문자 제외
+                if (questionLower.includes(word)) score += 0.2;
+                if (contentLower.includes(word)) score += 0.1;
+              }
+            });
+            
+            return { ...faq, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5);
       }
 
-      const finalResults = Array.from(uniqueResults.values())
-        .sort((a, b) => (b.score || 0) - (a.score || 0))
-        .slice(0, 5);
-
-      if (finalResults.length === 0) {
+      if (searchResults.length === 0) {
         return {
           success: false,
           message: '관련된 FAQ를 찾을 수 없습니다.',
@@ -161,8 +163,8 @@ export const searchFAQTool = tool({
 
       return {
         success: true,
-        message: `${finalResults.length}개의 관련 FAQ를 찾았습니다.`,
-        results: finalResults.map(faq => ({
+        message: `${searchResults.length}개의 관련 FAQ를 찾았습니다.`,
+        results: searchResults.map(faq => ({
           id: faq.id,
           kind: faq.kind || 'public',
           brand: faq.brand,
@@ -171,11 +173,11 @@ export const searchFAQTool = tool({
           content: faq.content,
           score: faq.score || 0,
           isInternal: faq.isInternal || false,
-          searchMethod: faq.chunks ? 'vector' : 'keyword',
+          searchMethod: useVectorSearch ? 'vector' : 'keyword',
         })),
       };
     } catch (error) {
-      console.error('하이브리드 FAQ 검색 도구 오류:', error);
+      console.error('FAQ 검색 도구 오류:', error);
       return {
         success: false,
         message: 'FAQ 검색 중 오류가 발생했습니다.',

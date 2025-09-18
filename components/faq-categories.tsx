@@ -13,7 +13,6 @@ import {
   Smartphone, 
   Award,
   HelpCircle,
-  MessageCircle,
   ArrowLeft,
   User,
   ChevronDown,
@@ -172,7 +171,7 @@ export const FAQCategories = ({ selectedCategory }: FAQCategoriesProps) => {
               {category && (
                 <>
                   <category.icon className="w-6 h-6 text-blue-600" />
-                  <h1 className="text-2xl font-bold text-gray-900">{category.name}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{category.name}</h1>
                 </>
               )}
             </div>
@@ -181,7 +180,7 @@ export const FAQCategories = ({ selectedCategory }: FAQCategoriesProps) => {
           {/* FAQ 목록 */}
           {loading ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">FAQ를 불러오는 중...</p>
+              <p className="text-gray-500 dark:text-gray-400">FAQ를 불러오는 중...</p>
             </div>
           ) : !loading && categoryFAQs.length > 0 ? (
             <div className="space-y-2">
@@ -234,13 +233,6 @@ export const FAQCategories = ({ selectedCategory }: FAQCategoriesProps) => {
           ) : !loading ? (
             <div className="text-center py-12">
               <p className="text-gray-500 mb-4">이 카테고리에 등록된 FAQ가 없습니다.</p>
-              <Button
-                onClick={() => router.push('/chat')}
-                className="flex items-center gap-2"
-              >
-                <MessageCircle className="w-4 h-4" />
-                AI 상담사에게 문의하기
-              </Button>
             </div>
           ) : null}
         </div>
@@ -257,10 +249,10 @@ export const FAQCategories = ({ selectedCategory }: FAQCategoriesProps) => {
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-12"
       >
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          미니학습지 도움말 센터
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          도움말 센터
         </h1>
-        <p className="text-xl text-gray-600 mb-8">
+        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
           궁금한 내용을 빠르게 찾아보세요
         </p>
         
