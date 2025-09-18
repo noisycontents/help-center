@@ -49,7 +49,7 @@ async function executeVectorSearch(query: string, includeInternal: boolean = fal
     // 공개 FAQ 검색 (항상 실행)
     searchPromises.push(
       searchFAQ(query).then(results => 
-        results.slice(0, Math.ceil(limit / 2)).map(faq => ({
+        results.slice(0, Math.ceil(limit / 2)).map((faq: any) => ({
           ...faq,
           kind: 'public',
           isInternal: false,
@@ -120,17 +120,17 @@ export const searchFAQTool = tool({
         // 병렬 검색: Public FAQ + Internal FAQ
         const [publicResults, internalResults] = await Promise.all([
           searchFAQ(query).then(results => 
-            results.map(faq => ({ ...faq, kind: 'public', isInternal: false, score: 0.6 }))
+            results.map((faq: any) => ({ ...faq, kind: 'public', isInternal: false, score: 0.6 }))
           ),
           searchInternalFAQ(query).then(results => 
-            results.map(faq => ({ ...faq, kind: 'internal', isInternal: true, score: 0.9 }))
+            results.map((faq: any) => ({ ...faq, kind: 'internal', isInternal: true, score: 0.9 }))
           ).catch(() => []) // Internal FAQ 검색 실패시 빈 배열 반환
         ]);
 
         // 키워드 검색 결과 점수 계산 및 통합
         const allKeywordResults = [...publicResults, ...internalResults];
         searchResults = allKeywordResults
-          .map(faq => {
+          .map((faq: any) => {
             let score = faq.score || 0.6; // 기본 점수
             const queryLower = query.toLowerCase();
             const questionLower = faq.question.toLowerCase();
@@ -164,7 +164,7 @@ export const searchFAQTool = tool({
       return {
         success: true,
         message: `${searchResults.length}개의 관련 FAQ를 찾았습니다.`,
-        results: searchResults.map(faq => ({
+        results: searchResults.map((faq: any) => ({
           id: faq.id,
           kind: faq.kind || 'public',
           brand: faq.brand,
