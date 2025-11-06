@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { tool } from 'ai';
-import { eq, like, or, desc, asc } from 'drizzle-orm';
+import { eq, like, or, desc, asc, and, type SQL } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { product } from '@/lib/db/schema';
@@ -16,7 +16,7 @@ async function searchProducts(query: string, language?: string, sortBy?: string)
   const db = drizzle(client);
   
   try {
-    let whereConditions = [];
+    const whereConditions: SQL[] = [];
     
     // 검색어가 있는 경우 상품명, 카테고리, SKU에서 검색
     if (query.trim()) {
@@ -50,9 +50,9 @@ async function searchProducts(query: string, language?: string, sortBy?: string)
     // WHERE 조건 적용
     if (whereConditions.length > 0) {
       queryBuilder = queryBuilder.where(
-        whereConditions.length === 1 
-          ? whereConditions[0] 
-          : whereConditions.reduce((acc, condition) => or(acc, condition))
+        whereConditions.length === 1
+          ? whereConditions[0]
+          : and(...whereConditions),
       );
     }
     
