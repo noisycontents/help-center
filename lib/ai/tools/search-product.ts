@@ -51,11 +51,16 @@ async function searchProducts(query: string, language?: string, sortBy?: string)
     
     // WHERE 조건 적용
     if (whereConditions.length > 0) {
-      queryBuilder = queryBuilder.where(
-        whereConditions.length === 1
-          ? whereConditions[0]
-          : and(...whereConditions),
-      );
+      if (whereConditions.length === 1) {
+        queryBuilder = queryBuilder.where(whereConditions[0]);
+      } else {
+        const [first, second, ...rest] = whereConditions as [
+          SQL,
+          SQL,
+          ...SQL[]
+        ];
+        queryBuilder = queryBuilder.where(and(first, second, ...rest));
+      }
     }
     
     // 정렬 적용
