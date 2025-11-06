@@ -50,8 +50,14 @@ function PureMessages({
     return message.parts.some((part) => {
       if (!part) return false;
       if (part.type === 'text' && part.text?.trim().length > 0) return true;
-      if (part.type === 'text-delta' && part.text?.trim().length > 0)
+
+      if (
+        typeof (part as any).delta === 'string' &&
+        (part as any).delta.trim().length > 0
+      ) {
         return true;
+      }
+
       if (part.type === 'reasoning' && part.text?.trim().length > 0)
         return true;
       return false;
