@@ -83,17 +83,34 @@ export type FAQChunks = InferSelectModel<typeof faqChunks>;
 // 상품 테이블
 export const product = pgTable('Product', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
-  sku: varchar('sku', { length: 64 }).notNull().unique(),
+  sku: text('sku').notNull().unique(), // varchar(64)에서 text로 변경하여 긴 SKU 지원
   language: text('language').notNull(),
   category: text('category'),
   productName: text('product_name').notNull(),
   price: integer('price').notNull(),
   discountPrice: integer('discount_price'),
+  productUrl: text('product_url'), // 상품 URL 추가
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export type Product = InferSelectModel<typeof product>;
+
+export const productChunks = pgTable('Product_Chunks', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  productId: uuid('product_id')
+    .notNull()
+    .references(() => product.id, { onDelete: 'cascade' }),
+  sku: text('sku').notNull(),
+  language: text('language').notNull(),
+  category: text('category'),
+  productName: text('product_name').notNull(),
+  content: text('content').notNull(),
+  embedding: vector('embedding'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export type ProductChunks = InferSelectModel<typeof productChunks>;
 
 export const chat = pgTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),

@@ -85,6 +85,20 @@
       "when": 1756782966841,
       "tag": "0011_slow_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1758515137011,
+      "tag": "0012_nebulous_karen_page",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1758517287432,
+      "tag": "0013_bumpy_ultimo",
+      "breakpoints": true
     }
   ]
 }

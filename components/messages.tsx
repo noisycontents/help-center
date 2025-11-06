@@ -43,59 +43,52 @@ function PureMessages({
 
   // 🚀 시간 기반 ThinkingMessage 제어
   const [showThinking, setShowThinking] = useState(false);
-  const [hideAiResponse, setHideAiResponse] = useState(false);
-  const [aiResponseStartTime, setAiResponseStartTime] = useState<number | null>(null);
+
+  const assistantMessageHasVisibleContent = (message: ChatMessage | undefined) => {
+    if (!message || message.role !== 'assistant') return false;
+
+    return message.parts.some((part) => {
+      if (!part) return false;
+      if (part.type === 'text' && part.text?.trim().length > 0) return true;
+      if (part.type === 'text-delta' && part.text?.trim().length > 0)
+        return true;
+      if (part.type === 'reasoning' && part.text?.trim().length > 0)
+        return true;
+      return false;
+    });
+  };
 
   useEffect(() => {
     if (messages.length === 0) {
       setShowThinking(false);
-      setHideAiResponse(false);
-      setAiResponseStartTime(null);
       return;
     }
 
     const lastMessage = messages[messages.length - 1];
 
-    // submitted 상태에서는 항상 표시
     if (status === 'submitted') {
       setShowThinking(true);
-      setHideAiResponse(false);
-      setAiResponseStartTime(null);
       return;
     }
 
-    // streaming 상태일 때
     if (status === 'streaming') {
-      // 마지막 메시지가 사용자 메시지면 계속 표시
       if (lastMessage?.role === 'user') {
         setShowThinking(true);
-        setHideAiResponse(false);
-        setAiResponseStartTime(null);
         return;
       }
 
-      // AI 메시지가 생성된 순간 타이머 시작
-      if (lastMessage?.role === 'assistant' && !aiResponseStartTime) {
-        setAiResponseStartTime(Date.now());
-        setHideAiResponse(true); // AI 응답 일시적으로 숨김
-        
-        // 500ms 후에 ThinkingMessage 숨기고 AI 응답 표시
-        setTimeout(() => {
-          setShowThinking(false);
-          setHideAiResponse(false);
-        }, 500);
-        
-        return;
+      if (assistantMessageHasVisibleContent(lastMessage)) {
+        setShowThinking(false);
+      } else {
+        setShowThinking(true);
       }
+      return;
     }
 
-    // 다른 상태에서는 숨김
     if (status === 'ready' || status === 'error') {
       setShowThinking(false);
-      setHideAiResponse(false);
-      setAiResponseStartTime(null);
     }
-  }, [status, messages, aiResponseStartTime]);
+  }, [status, messages]);
 
   useDataStream();
 
@@ -105,19 +98,24 @@ function PureMessages({
         <ConversationContent className="flex flex-col gap-4">
           {messages.length === 0 && <Greeting />}
 
-          {messages.map((message, index) => (
-            <div
-              key={message.id}
-              className={
-                hideAiResponse && message.role === 'assistant' && index === messages.length - 1
-                  ? 'hidden' // 완전히 숨김 (높이도 제거)
-                  : ''
-              }
-            >
+          {messages.map((message, index) => {
+            const isLastMessage = index === messages.length - 1;
+            const shouldHideAssistantPlaceholder =
+              showThinking &&
+              isLastMessage &&
+              message.role === 'assistant' &&
+              !assistantMessageHasVisibleContent(message);
+
+            if (shouldHideAssistantPlaceholder) {
+              return null;
+            }
+
+            return (
               <PreviewMessage
+                key={message.id}
                 chatId={chatId}
                 message={message}
-                isLoading={status === 'streaming' && messages.length - 1 === index}
+                isLoading={status === 'streaming' && isLastMessage}
                 vote={
                   votes
                     ? votes.find((vote) => vote.messageId === message.id)
@@ -126,12 +124,10 @@ function PureMessages({
                 setMessages={setMessages}
                 regenerate={regenerate}
                 isReadonly={isReadonly}
-                requiresScrollPadding={
-                  hasSentMessage && index === messages.length - 1
-                }
+                requiresScrollPadding={hasSentMessage && isLastMessage}
               />
-            </div>
-          ))}
+            );
+          })}
 
           {/* 🎯 단일 위치에서만 ThinkingMessage 표시 */}
           {showThinking && (

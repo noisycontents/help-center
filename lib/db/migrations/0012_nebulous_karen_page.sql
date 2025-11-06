@@ -1,0 +1,1 @@
+ALTER TABLE "Product" ALTER COLUMN "sku" SET DATA TYPE text;

@@ -11,7 +11,7 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
    * For users without an account
    */
   guest: {
-    maxMessagesPerDay: 30, // Guest 사용자: 24시간 30개 제한
+    maxMessagesPerDay: 100, // Guest 사용자: 24시간 100개 제한
     availableChatModelIds: ['chat-model', 'chat-model-reasoning'],
   },
 
@@ -19,7 +19,7 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
    * For users with an account
    */
   regular: {
-    maxMessagesPerDay: 50, // 로그인 사용자: 24시간 50개 제한
+    maxMessagesPerDay: 300, // 로그인 사용자: 24시간 300개 제한
     availableChatModelIds: ['chat-model', 'chat-model-reasoning'],
   },
 

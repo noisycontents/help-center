@@ -29,6 +29,23 @@ const vector = customType({
   dataType() {
     return 'vector(1536)';
   },
+  toDriver(value) {
+    if (!Array.isArray(value)) {
+      throw new Error('Vector values must be number arrays');
+    }
+    return JSON.stringify(value);
+  },
+  fromDriver(value) {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      console.warn('Failed to parse vector from driver:', error);
+      return [];
+    }
+  },
 });
 
 const faq = pgTable('FAQ', {
@@ -160,7 +177,7 @@ async function processPublicFAQ() {
           tag: faqItem.tag,
           chunkIdx: i,
           content: chunk,
-          embedding: JSON.stringify(embedding),
+          embedding,
         });
       }
 
@@ -213,7 +230,7 @@ async function processInternalFAQ() {
           tag: faqItem.tag,
           chunkIdx: i,
           content: chunk,
-          embedding: JSON.stringify(embedding),
+          embedding,
         });
       }
 

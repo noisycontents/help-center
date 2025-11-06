@@ -7,7 +7,7 @@ import {
   streamText,
 } from 'ai';
 import { auth, type UserType } from '@/app/(auth)/auth';
-import { type RequestHints, systemPrompt, consultantSystemPrompt } from '@/lib/ai/prompts';
+import { type RequestHints, consultantSystemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
   deleteChatById,
@@ -22,7 +22,8 @@ import {
 import { convertToUIMessages, generateUUID } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
-import { searchFAQTool } from '@/lib/ai/tools/search-faq';
+import { searchFAQTool, searchFAQForQuery } from '@/lib/ai/tools/search-faq';
+import { searchProductTool, getProductStatsTool } from '@/lib/ai/tools/search-product';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
@@ -40,9 +41,17 @@ import type { VisibilityType } from '@/components/visibility-selector';
 
 export const maxDuration = 60;
 
+const isResumableStreamDisabled =
+  process.env.RESUMABLE_STREAM_DISABLED === 'true' ||
+  (!process.env.REDIS_URL && !process.env.KV_REST_API_URL && !process.env.UPSTASH_REDIS_REST_URL);
+
 let globalStreamContext: ResumableStreamContext | null = null;
 
 export function getStreamContext() {
+  if (isResumableStreamDisabled) {
+    return null;
+  }
+
   if (!globalStreamContext) {
     try {
       globalStreamContext = createResumableStreamContext({
@@ -56,19 +65,99 @@ export function getStreamContext() {
       } else {
         console.error(error);
       }
+      globalStreamContext = null;
+      return null;
     }
   }
 
   return globalStreamContext;
 }
 
+function createImmediateAssistantResponse({
+  chatId,
+  text,
+}: {
+  chatId: string;
+  text: string;
+}) {
+  const stream = createUIMessageStream({
+    execute: ({ writer: dataStream }) => {
+      const messageId = generateUUID();
+      const messagePayload = {
+        id: messageId,
+        role: 'assistant',
+        parts: [
+          {
+            type: 'text' as const,
+            text,
+          },
+        ],
+        createdAt: new Date().toISOString(),
+      };
+
+      dataStream.write({
+        type: 'data-appendMessage',
+        data: JSON.stringify(messagePayload),
+      });
+
+      dataStream.write({
+        type: 'data-finish',
+        data: JSON.stringify({
+          messages: [messagePayload],
+        }),
+      });
+    },
+    generateId: generateUUID,
+    onFinish: async ({ messages }) => {
+      await saveMessages({
+        messages: messages.map((message) => ({
+          id: message.id,
+          role: message.role,
+          parts: message.parts,
+          createdAt: new Date(),
+          attachments: [],
+          chatId,
+        })),
+      });
+    },
+  });
+
+  return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
+}
+
+function formatFAQContext(
+  results: Awaited<ReturnType<typeof searchFAQForQuery>>['results'],
+) {
+  const limitedResults = results.slice(0, 3);
+  const formattedEntries = limitedResults
+    .map((faq, index) => {
+      const safeContent =
+        faq.content.length > 1200
+          ? `${faq.content.slice(0, 1200)}...`
+          : faq.content;
+      const sourceLabel = faq.isInternal ? 'internal' : 'public';
+      return `[#${index + 1} | ${sourceLabel}] 질문: ${faq.question}\n답변:\n${safeContent}`;
+    })
+    .join('\n\n');
+
+  return `다음은 고객 문의와 관련된 참고 자료입니다. 아래 내용을 우선적으로 활용해 정확한 답변을 제공하세요:\n\n${formattedEntries}`;
+}
+
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
+  let json: any;
   try {
-    const json = await request.json();
+    json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
+  } catch (error) {
+    console.error('❌ 요청 본문 파싱 오류:', error);
+    if (error instanceof Error) {
+      console.error('❌ 에러 상세:', error.message);
+    }
+    if (json) {
+      console.error('❌ 요청 본문:', JSON.stringify(json, null, 2));
+    }
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
@@ -121,63 +210,17 @@ export async function POST(request: Request) {
       if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
         // 🚀 Rate limit을 에러가 아닌 정상 AI 응답으로 처리
         const rateLimitMessage = `안녕하세요! 😊<br>오늘 질문 한도에 도달하셨습니다.<br><br>📝 로그인하면 추가 질문이 가능합니다.<br>혹은 <a href="/chat?mode=help" style="color: #000000; text-decoration: underline;">도움말 센터</a>에서 정보를 찾아보실 수 있습니다.<br><br>🔗 <a href="https://studymini.com/inquiry" target="_blank" style="color: #000000; text-decoration: underline;">일대일 문의하기</a><br>1:1 문의 게시판을 통해 문의해 주시면 최대한 빠르게 답변드리겠습니다.<br><br>양해 부탁드립니다. 감사합니다! 🙏`;
-        
-        // 정상적인 스트림 응답으로 반환
-        const stream = createUIMessageStream({
-          execute: ({ writer: dataStream }) => {
-            // 즉시 완료된 메시지 작성
-            const messageId = generateUUID();
-            dataStream.write({
-              type: 'data-appendMessage',
-              data: JSON.stringify({
-                id: messageId,
-                role: 'assistant',
-                parts: [{
-                  type: 'text',
-                  text: rateLimitMessage
-                }],
-                createdAt: new Date().toISOString(),
-              }),
-            });
-            
-            // 스트림 완료 신호
-            dataStream.write({
-              type: 'data-finish',
-              data: JSON.stringify({
-                messages: [{
-                  id: messageId,
-                  role: 'assistant',
-                  parts: [{
-                    type: 'text',
-                    text: rateLimitMessage
-                  }],
-                  createdAt: new Date().toISOString(),
-                }]
-              }),
-            });
-          },
-          generateId: generateUUID,
-          onFinish: async ({ messages }) => {
-            await saveMessages({
-              messages: messages.map((message) => ({
-                id: message.id,
-                role: message.role,
-                parts: message.parts,
-                createdAt: new Date(),
-                attachments: [],
-                chatId: id,
-              })),
-            });
-          },
-        });
 
-        return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
+        return createImmediateAssistantResponse({
+          chatId: id,
+          text: rateLimitMessage,
+        });
       }
     }
 
     const chat = await getChatById({ id });
 
-    let chatTitle = 'New Chat'; // 기본 제목
+    const chatTitle = 'New Chat'; // 기본 제목
     
     if (!chat) {
       // 🚀 성능 최적화: 기본 제목으로 채팅 먼저 생성, AI 제목 생성은 백그라운드에서
@@ -223,41 +266,79 @@ export async function POST(request: Request) {
       })
     ]);
 
+    const currentMessageTextParts = message.parts
+      .filter((part) => part.type === 'text')
+      .map((part) => part.text);
+    const currentMessageText = currentMessageTextParts.join(' ').trim();
+
     // 🚀 연속 스팸 방지: 동일 텍스트 연속 작성 제한 (관리자 제외)
     if (!isAdmin && messagesFromDb.length > 0) {
       const recentUserMessages = messagesFromDb
         .filter(msg => msg.role === 'user')
-        .slice(-2); // 최근 2개 사용자 메시지
+        .slice(-2); // 가장 최근 사용자 메시지 2개 확인
 
-      if (recentUserMessages.length > 0) {
-        const currentMessageText = message.parts
-          .filter(part => part.type === 'text')
-          .map(part => part.text)
-          .join(' ')
-          .trim();
+      if (recentUserMessages.length === 2) {
+        const [secondLastUserMessage, lastUserMessage] = recentUserMessages;
+        const extractTextFromParts = (parts: any) =>
+          Array.isArray(parts)
+            ? parts
+                .filter((part: any) => part?.type === 'text')
+                .map((part: any) => part.text)
+                .join(' ')
+                .trim()
+            : '';
 
-        const lastMessage = recentUserMessages[recentUserMessages.length - 1];
-        const lastUserMessageText = lastMessage?.parts
-          ? (lastMessage.parts as any[])
-              .filter((part: any) => part.type === 'text')
-              .map((part: any) => part.text)
-              .join(' ')
-              .trim()
-          : '';
+        const lastUserMessageText = extractTextFromParts(lastUserMessage?.parts);
+        const secondLastUserMessageText = extractTextFromParts(
+          secondLastUserMessage?.parts,
+        );
 
-        // 동일한 텍스트 연속 작성 방지
-        if (currentMessageText === lastUserMessageText && currentMessageText.length > 0) {
-          return Response.json(
-            { 
-              error: '동일한 질문을 연속으로 작성하실 수 없습니다. 다른 질문을 해주세요.' 
-            }, 
-            { status: 400 }
-          );
+        const isTripleDuplicate =
+          currentMessageText.length > 0 &&
+          currentMessageText === lastUserMessageText &&
+          currentMessageText === secondLastUserMessageText;
+
+        if (isTripleDuplicate) {
+          return createImmediateAssistantResponse({
+            chatId: id,
+            text: '동일한 질문을 연속으로 작성하실 수 없습니다. 다른 질문을 해주세요.',
+          });
         }
       }
     }
 
     const uiMessages = [...convertToUIMessages(messagesFromDb), message];
+
+    let modelMessages = [...uiMessages];
+
+    if (currentMessageText.length > 0) {
+      try {
+        const faqSearch = await searchFAQForQuery(currentMessageText, {
+          limit: 3,
+        });
+
+        if (faqSearch.success && faqSearch.results.length > 0) {
+          modelMessages = [
+            ...modelMessages,
+            {
+              id: generateUUID(),
+              role: 'system',
+              metadata: {
+                createdAt: new Date().toISOString(),
+              },
+              parts: [
+                {
+                  type: 'text' as const,
+                  text: formatFAQContext(faqSearch.results),
+                },
+              ],
+            },
+          ];
+        }
+      } catch (error) {
+        console.warn('FAQ 검색 컨텍스트 추가 실패:', error);
+      }
+    }
 
     const { longitude, latitude, city, country } = geolocation(request);
 
@@ -283,18 +364,22 @@ export async function POST(request: Request) {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: consultantSystemPrompt,
-          messages: convertToModelMessages(uiMessages),
+          messages: convertToModelMessages(modelMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []
               : [
                   'searchFAQTool',
+                  'searchProductTool',
+                  'getProductStatsTool',
                   'requestSuggestions',
                 ],
           experimental_transform: smoothStream({ chunking: 'word', delayInMs: 5 }),
           tools: {
             searchFAQTool,
+            searchProductTool,
+            getProductStatsTool,
             requestSuggestions: requestSuggestions({
               session,
               dataStream,
@@ -347,6 +432,13 @@ export async function POST(request: Request) {
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }
+
+    console.error('❌ 채팅 요청 처리 중 오류:', error);
+    if (error instanceof Error) {
+      console.error('❌ 에러 메시지:', error.message);
+      console.error('❌ 에러 스택:', error.stack);
+    }
+    return new ChatSDKError('offline:chat').toResponse();
   }
 }
 

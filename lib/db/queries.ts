@@ -12,6 +12,7 @@ import {
   lt,
   like,
   or,
+  sql,
   type SQL,
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -270,8 +271,16 @@ export async function saveMessages({
   messages: Array<DBMessage>;
 }) {
   try {
-    return await db.insert(message).values(messages);
+    if (!messages.length) {
+      return;
+    }
+
+    return await db
+      .insert(message)
+      .values(messages)
+      .onConflictDoNothing();
   } catch (error) {
+    console.error('saveMessages error:', error);
     throw new ChatSDKError('bad_request:database', 'Failed to save messages');
   }
 }
@@ -855,8 +864,12 @@ export async function searchFAQChunks({
   embedding?: number[];
   limit?: number;
   includeInternal?: boolean;
-}): Promise<Array<FAQChunks>> {
+}): Promise<Array<FAQChunks & { distance?: number }>> {
   try {
+    if (embedding && embedding.length === 0) {
+      embedding = undefined;
+    }
+
     let whereConditions: SQL[] = [];
 
     // kind 필터링
@@ -885,8 +898,32 @@ export async function searchFAQChunks({
 
     // 벡터 검색은 추후 구현 (임베딩이 제공된 경우)
     if (embedding) {
-      // TODO: 벡터 유사도 검색 구현
-      // ORDER BY embedding <-> $1 LIMIT $2
+      const vectorLiteral = sql.raw(
+        `'[${embedding.join(',')}]'::vector`,
+      );
+
+      const baseQuery = sql`
+        SELECT
+          "FAQ_Chunks".*,
+          "FAQ_Chunks"."embedding" <-> ${vectorLiteral} AS distance
+        FROM "FAQ_Chunks"
+      `;
+
+      const clauses: SQL[] = [];
+
+      if (whereClause) {
+        clauses.push(sql`WHERE ${whereClause}`);
+      }
+
+      const finalQuery = sql`
+        ${baseQuery}
+        ${clauses.length > 0 ? sql.join(clauses, sql`\n`) : sql``}
+        ORDER BY distance ASC
+        LIMIT ${limit}
+      `;
+
+      const result = await db.execute(finalQuery);
+      return result.rows as Array<FAQChunks & { distance?: number }>;
     }
 
     const results = await dbQuery.execute();
@@ -896,6 +933,52 @@ export async function searchFAQChunks({
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to search FAQ chunks',
+    );
+  }
+}
+
+export async function getFAQByIds(ids: string[]): Promise<Array<FAQ>> {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  try {
+    const results = await db
+      .select()
+      .from(faq)
+      .where(inArray(faq.id, ids))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('FAQ 다건 조회 중 오류 발생:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get FAQ by ids',
+    );
+  }
+}
+
+export async function getFAQInternalByIds(
+  ids: string[],
+): Promise<Array<FAQInternal>> {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  try {
+    const results = await db
+      .select()
+      .from(faqInternal)
+      .where(inArray(faqInternal.id, ids))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('내부 FAQ 다건 조회 중 오류 발생:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get internal FAQ by ids',
     );
   }
 }
