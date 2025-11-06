@@ -20,13 +20,15 @@ async function searchProducts(query: string, language?: string, sortBy?: string)
     
     // 검색어가 있는 경우 상품명, 카테고리, SKU에서 검색
     if (query.trim()) {
-      whereConditions.push(
-        or(
-          like(product.productName, `%${query}%`),
-          like(product.category, `%${query}%`),
-          like(product.sku, `%${query}%`)
-        )
+      const keywordCondition = or(
+        like(product.productName, `%${query}%`),
+        like(product.category, `%${query}%`),
+        like(product.sku, `%${query}%`),
       );
+
+      if (keywordCondition) {
+        whereConditions.push(keywordCondition);
+      }
     }
     
     // 언어 필터
