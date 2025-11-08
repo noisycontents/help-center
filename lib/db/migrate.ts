@@ -3,9 +3,13 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 
-config({
-  path: '.env.development.local',
-});
+// Vercel 환경에서는 환경변수가 이미 설정되어 있으므로 dotenv를 사용하지 않음
+// 로컬 개발 환경에서만 .env 파일 로드
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  config({
+    path: '.env.development.local',
+  });
+}
 
 const runMigrate = async () => {
   if (!process.env.POSTGRES_URL) {
