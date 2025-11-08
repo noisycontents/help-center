@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { tool } from 'ai';
-import { eq, like, or, desc, asc, and, type SQL } from 'drizzle-orm';
+import { eq, like, or, desc, asc, and, type SQL, sql, count } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { product } from '@/lib/db/schema';
@@ -16,7 +16,8 @@ async function searchProducts(query: string, language?: string, sortBy?: string)
   const db = drizzle(client);
   
   try {
-    const whereConditions: SQL[] = [];
+    // WHERE 조건 구성
+    const conditions: SQL[] = [];
     
     // 검색어가 있는 경우 상품명, 카테고리, SKU에서 검색
     if (query.trim()) {
@@ -27,16 +28,17 @@ async function searchProducts(query: string, language?: string, sortBy?: string)
       );
 
       if (keywordCondition) {
-        whereConditions.push(keywordCondition);
+        conditions.push(keywordCondition);
       }
     }
     
     // 언어 필터
     if (language) {
-      whereConditions.push(eq(product.language, language));
+      conditions.push(eq(product.language, language));
     }
     
-    let queryBuilder = db
+    // 쿼리 빌더 생성
+    const baseSelect = db
       .select({
         sku: product.sku,
         language: product.language,
@@ -49,39 +51,37 @@ async function searchProducts(query: string, language?: string, sortBy?: string)
       })
       .from(product);
     
-    // WHERE 조건 적용
-    if (whereConditions.length > 0) {
-      if (whereConditions.length === 1) {
-        queryBuilder = queryBuilder.where(whereConditions[0]);
-      } else {
-        const [first, second, ...rest] = whereConditions as [
-          SQL,
-          SQL,
-          ...SQL[]
-        ];
-        queryBuilder = queryBuilder.where(and(first, second, ...rest));
-      }
+    // WHERE 조건 적용 (조건이 있을 때만)
+    let queryWithWhere: typeof baseSelect;
+    if (conditions.length > 0) {
+      const whereClause = conditions.length === 1
+        ? conditions[0]
+        : and(...conditions);
+      queryWithWhere = baseSelect.where(whereClause) as typeof baseSelect;
+    } else {
+      queryWithWhere = baseSelect;
     }
     
     // 정렬 적용
+    let finalQuery;
     switch (sortBy) {
       case 'price_asc':
-        queryBuilder = queryBuilder.orderBy(asc(product.price));
+        finalQuery = queryWithWhere.orderBy(asc(product.price));
         break;
       case 'price_desc':
-        queryBuilder = queryBuilder.orderBy(desc(product.price));
+        finalQuery = queryWithWhere.orderBy(desc(product.price));
         break;
       case 'name':
-        queryBuilder = queryBuilder.orderBy(asc(product.productName));
+        finalQuery = queryWithWhere.orderBy(asc(product.productName));
         break;
       case 'newest':
-        queryBuilder = queryBuilder.orderBy(desc(product.createdAt));
+        finalQuery = queryWithWhere.orderBy(desc(product.createdAt));
         break;
       default:
-        queryBuilder = queryBuilder.orderBy(asc(product.productName));
+        finalQuery = queryWithWhere.orderBy(asc(product.productName));
     }
     
-    const results = await queryBuilder.limit(20).execute();
+    const results = await finalQuery.limit(20).execute();
     
     await client.end();
     
@@ -112,14 +112,14 @@ async function getProductStatsByLanguage() {
     const stats = await db
       .select({
         language: product.language,
-        count: 'count(*)',
-        avgPrice: 'avg(price)',
-        minPrice: 'min(price)',
-        maxPrice: 'max(price)'
+        count: count(),
+        avgPrice: sql<number>`avg(${product.price})`,
+        minPrice: sql<number>`min(${product.price})`,
+        maxPrice: sql<number>`max(${product.price})`
       })
       .from(product)
       .groupBy(product.language)
-      .orderBy(desc('count(*)'));
+      .orderBy(desc(count()));
     
     await client.end();
     

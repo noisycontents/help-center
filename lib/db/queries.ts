@@ -923,7 +923,7 @@ export async function searchFAQChunks({
       `;
 
       const result = await db.execute(finalQuery);
-      return result.rows as Array<FAQChunks & { distance?: number }>;
+      return result as unknown as Array<FAQChunks & { distance?: number }>;
     }
 
     const results = await dbQuery.execute();
