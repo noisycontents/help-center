@@ -41,9 +41,11 @@ import type { VisibilityType } from '@/components/visibility-selector';
 
 export const maxDuration = 60;
 
+const hasRedisSupport =
+  Boolean(process.env.REDIS_URL || process.env.KV_URL || process.env.UPSTASH_REDIS_REST_URL);
+
 const isResumableStreamDisabled =
-  process.env.RESUMABLE_STREAM_DISABLED === 'true' ||
-  (!process.env.REDIS_URL && !process.env.KV_REST_API_URL && !process.env.UPSTASH_REDIS_REST_URL);
+  process.env.RESUMABLE_STREAM_DISABLED !== 'false' || !hasRedisSupport;
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
